@@ -1,0 +1,93 @@
+---
+title: "0 - Set data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup, message=FALSE, warning=FALSE}
+# packages
+library(readr)
+library(lubridate)
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(googledrive)
+
+# path
+opts_knit$set(root.dir = normalizePath('../'))
+
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+registerDoMC(cores=8)
+theme_set(theme_bw())
+
+options(tibble.print_max = 80, tibble.print_min = 80)
+
+"%ni%" <- Negate("%in%")
+
+
+set_NA <- `is.na<-` #Function to add NAs columns
+
+```
+
+
+
+```{r}
+id <- drive_find(type = 'spreadsheet') %>% filter(str_detect(name, "Formulaire")) %>% select(id)
+
+drive_get(id = as_id(id$id))
+drive_download(file = as_id(id$id), path = "data/ac_survey.xlsx")
+
+```
+
+```{r}
+
+data_raw <- read_xlsx("data/ac_survey.xlsx")
+data_raw %>% head
+```
+
+
+```{r}
+
+tab_columns <- data_raw %>%
+  colnames %>%
+  enframe(name  = NULL) %>% 
+  mutate(id = paste("Q",1:n(), sep = "")) %>% 
+  rename(question = value) 
+
+data_work <- data_raw %>% 
+  rename_all(vars(paste("Q",1:ncol(data_raw),sep = "")))
+
+```
+
+
+```{r}
+
+Q3_options <- c("Conférences", "vulgarisation", "Livres", "Vidéos", "presse", "Publications scientifiques")
+
+data_work <- data_work %>%
+     set_NA(Q3_options)
+```
+
+
+```{r}
+
+flag_name <- function(x) {return(ifelse(any(str_detect(Q3, colnames(.)))), TRUE, FALSE)}
+flag_name <- function(x) {return(colnames(.))}
+
+
+data_work <- data_work %>%
+  mutate_at(vars(Q3_options), .funs = list(name = ~ colnames(.)))
+
+
+
+data_work <- data_work %>%
+  mutate_at(vars(Q3_options), .funs = function(x) {return(0)})
+
+
+
+```
+
+
