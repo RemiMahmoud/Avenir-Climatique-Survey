@@ -38,7 +38,7 @@ set_NA <- `is.na<-` #Function to add NAs columns
 id <- drive_find(type = 'spreadsheet') %>% filter(str_detect(name, "Formulaire")) %>% select(id)
 
 drive_get(id = as_id(id$id))
-drive_download(file = as_id(id$id), path = "data/ac_survey.xlsx")
+drive_download(file = as_id(id$id), path = "data/ac_survey.xlsx", overwrite = TRUE)
 
 ```
 
@@ -66,28 +66,47 @@ data_work <- data_raw %>%
 ```{r}
 
 Q3_options <- c("Conférences", "vulgarisation", "Livres", "Vidéos", "presse", "Publications scientifiques")
+Q9_options <- c("pouvoir d'achat", "potentiel d'action", "climatosceptiques", "niveau de vie si cette baisse s'opère pour les autres également", "niveau de vie même si cette baisse ne s'opère pas pour les autres", "démocratique", "hiérarchiser les problèmes", "adaptabilité de l'homme")
+Q10_options <- c("mode de vie", "esprit sceptique","complotiste", "opinion", "stupidité", "dogme religieux", "éducation")
+Q16_options <- c("réseaux sociaux", "références directement", "profil bas", "l'émotion", "conférence")
+Q28_options <- c("Académicien", "Coach", "Ancien Académicien")
+Q25_options <- c("Local", "Bio", "Végétalien", "Végétarien", "Flexitarien", "pas trop attention")
 
-data_work <- data_work %>%
-     set_NA(Q3_options)
+
 ```
 
+```{r}
+ data_work %>% select(Q27,Q29,Q30) %>% table
+#Remove useless columns
+
+data_work <- data_work  %>% 
+  select(-c(Q27, Q29,Q30)) 
+
+
+```
 
 ```{r}
 
-flag_name <- function(x) {return(ifelse(any(str_detect(Q3, colnames(.)))), TRUE, FALSE)}
-flag_name <- function(x) {return(colnames(.))}
+for (var in c(Q3_options)) {
+ data_work[[var]] <- grepl(var, data_work$Q3)
+}
 
+for (var in Q9_options) {
+ data_work[[var]] <- grepl(var, data_work$Q9)
+}
 
-data_work <- data_work %>%
-  mutate_at(vars(Q3_options), .funs = list(name = ~ colnames(.)))
+for (var in Q16_options) {
+ data_work[[var]] <- grepl(var, data_work$Q16)
+}
 
+for (var in Q28_options) {
+ data_work[[var]] <- grepl(var, data_work$Q28,fixed = TRUE)
+}
 
-
-data_work <- data_work %>%
-  mutate_at(vars(Q3_options), .funs = function(x) {return(0)})
-
+for (var in Q25_options) {
+ data_work[[var]] <- grepl(var, data_work$Q25)
+}
 
 
 ```
-
 
