@@ -110,3 +110,26 @@ for (var in Q25_options) {
 
 ```
 
+```{r}
+data_work %>% str
+#Many characters that can be turn into factors
+```
+
+```{r}
+
+data_work <- data_work %>%
+  mutate_at(paste("Q", c(2,4,5,6,7,11,12,13,14,15,17,19,21,22,24,26), sep = ""),
+            .funs = as.factor) 
+
+
+```
+
+
+
+```{r}
+
+write_rds(data_work, path = "data/data_work.rds")
+
+
+```
+

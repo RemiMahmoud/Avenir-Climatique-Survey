@@ -1,0 +1,41 @@
+---
+title: "1-Visualize Data"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup, message=FALSE, warning=FALSE}
+# packages
+library(readr)
+library(lubridate)
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(googledrive)
+
+# path
+opts_knit$set(root.dir = normalizePath('../'))
+
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+registerDoMC(cores=8)
+theme_set(theme_bw())
+
+options(tibble.print_max = 80, tibble.print_min = 80)
+
+"%ni%" <- Negate("%in%")
+
+
+set_NA <- `is.na<-` #Function to add NAs columns
+
+```
+
+
+```{r}
+
+data_work <- read_rds('data/data_work.rds')
+
+```
