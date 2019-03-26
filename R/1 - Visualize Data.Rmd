@@ -1,12 +1,10 @@
 ---
 title: "1-Visualize Data"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ```{r setup, message=FALSE, warning=FALSE}
 # packages
@@ -21,7 +19,6 @@ library(googledrive)
 opts_knit$set(root.dir = normalizePath('../'))
 
 opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
-registerDoMC(cores=8)
 theme_set(theme_bw())
 
 options(tibble.print_max = 80, tibble.print_min = 80)
@@ -31,11 +28,73 @@ options(tibble.print_max = 80, tibble.print_min = 80)
 
 set_NA <- `is.na<-` #Function to add NAs columns
 
+plot_factor <- function(data, column, tab_columns = tab_columns){
+  # column = enquo(column)
+  name = quo_name(column)
+  data_tmp <- data %>%
+    mutate(!! name := !!column %>% fct_infreq() %>% fct_rev()) %>%
+    count(!! column) %>% 
+    mutate(prop = n/sum(n))
+  
+  data_tmp %>% 
+    ggplot(aes(!! column, prop)) +
+    geom_col() +
+  scale_y_continuous(labels = scales::percent,breaks = seq(0,1,by = 0.1)) +
+  labs(
+    x = NULL,
+    y = "Percent of responses"
+  ) + 
+  coord_flip() +
+    ggtitle(tab_columns %>% filter(id == column) %>% pull(question))%>% 
+    return()
+  
+}
+
+plot_logical()
+
 ```
 
 
 ```{r}
 
 data_work <- read_rds('data/data_work.rds')
+tab_columns <- read_rds('data/tab_columns.rds')
 
 ```
+
+```{r}
+# data_work %>% str
+factor_indexes <- c(2,4,5,6,7,11,12,13,14,15,17,19,21,22,24,26)
+
+data_work %>% plot_factor(sym("Q22"))
+for(i in factor_indexes){
+  data_work %>% plot_factor(sym(paste("Q",i, sep = ""))) %>% print()
+}
+
+
+
+
+```
+
+
+```{r ages}
+
+data_work %>% 
+  count(Q20) %>% 
+  mutate(prop = n/sum(n)) %>%  
+  ggplot(aes(x = Q20, y = n)) + geom_col(color = 'black', fill = "white") +
+  scale_y_continuous() + scale_x_continuous(breaks = seq(19,78,by=5))
+
+
+```
+
+
+```{r logical}
+
+factor_logical <- data_work %>% select_if(is.logical) %>% names
+
+data_work %>% count(Livres) %>% mutate(prop = n/sum(n))  %>% 
+  ggplot(aes(x="", y=prop, fill=Livres))  + geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) + scale_y_continuous(labels = scales::percent)
+```
+
+

@@ -129,6 +129,7 @@ data_work <- data_work %>%
 ```{r}
 
 write_rds(data_work, path = "data/data_work.rds")
+write_rds(tab_columns, path = "data/tab_columns.rds")
 
 
 ```
