@@ -1,8 +1,8 @@
 ---
 title: "1-Visualize Data"
 output:
-  html_document: default
   pdf_document: default
+  html_document: default
 ---
 
 
@@ -13,7 +13,6 @@ library(lubridate)
 library(tidyverse)
 library(knitr)
 library(readxl)
-library(googledrive)
 
 # path
 opts_knit$set(root.dir = normalizePath('../'))
@@ -28,29 +27,65 @@ options(tibble.print_max = 80, tibble.print_min = 80)
 
 set_NA <- `is.na<-` #Function to add NAs columns
 
-plot_factor <- function(data, column, tab_columns = tab_columns){
+plot_factor <- function(data, column, tab_columns, order_factor_freq = TRUE ){
   # column = enquo(column)
   name = quo_name(column)
+  if(order_factor_freq){
   data_tmp <- data %>%
     mutate(!! name := !!column %>% fct_infreq() %>% fct_rev()) %>%
     count(!! column) %>% 
     mutate(prop = n/sum(n))
-  
+  } else
+  {
+  data_tmp <- data %>%
+    mutate(!! name := !!column) %>%
+    count(!! column) %>% 
+    mutate(prop = n/sum(n))    
+  }
   data_tmp %>% 
     ggplot(aes(!! column, prop)) +
-    geom_col() +
+    geom_col(color = "black", fill = "white") +
   scale_y_continuous(labels = scales::percent,breaks = seq(0,1,by = 0.1)) +
   labs(
     x = NULL,
     y = "Percent of responses"
   ) + 
   coord_flip() +
-    ggtitle(tab_columns %>% filter(id == column) %>% pull(question))%>% 
+    geom_text(aes(label = paste0((prop*100) %>% round(digits = 1) %>% as.character, " %")), size = 2, hjust = 1)+
+    labs(title = tab_columns %>% filter(id == column) %>% pull(question))%>% 
     return()
   
 }
 
-plot_logical()
+plot_logical <- function(data, column, data_options, tab_columns){
+  id_question <- data_options %>% filter(options == column) %>% pull(id)
+  title <- tab_columns %>% filter(id == id_question) %>% pull(question)
+  data_work %>%
+    count(!!column) %>%
+    mutate(prop = n/sum(n))  %>% 
+  ggplot(aes(x="", y=prop, fill=!! column))  + 
+    geom_bar(width = 1, stat = "identity") +
+    coord_polar("y", start=0) +
+    scale_y_continuous(labels = scales::percent, breaks = seq(0,1,by = 0.1)) + 
+    ggtitle(label = title) %>% 
+    return()
+    
+}
+
+plot_logical_age <- function(data, column, data_options, tab_columns){
+  id_question <- data_options %>% filter(options == column) %>% pull(id)
+  
+  if(identical(id_question, character(0))) 
+  {title <- tab_columns %>% filter(id == column) %>% pull(question)}
+  else{title <- tab_columns %>% filter(id == id_question) %>% pull(question)}
+  
+  
+  data_work %>%
+    ggplot(aes(x=!! column, y= Q20))  + 
+    geom_boxplot() +
+    ggtitle(label = title) %>% 
+    return()
+}
 
 ```
 
@@ -59,16 +94,38 @@ plot_logical()
 
 data_work <- read_rds('data/data_work.rds')
 tab_columns <- read_rds('data/tab_columns.rds')
+data_options <- read_rds('data/data_options.rds')
 
 ```
 
-```{r}
-# data_work %>% str
-factor_indexes <- c(2,4,5,6,7,11,12,13,14,15,17,19,21,22,24,26)
-
-data_work %>% plot_factor(sym("Q22"))
+```{r results="asis"}
+factor_indexes <- c(2,4,5,6,7,11,12,13,14,15,17,19,21,22,23,24,26)
+order_factors <- c(4,5,11,12,13,14,15,17)
+data_work %>% plot_factor(sym("Q22"),tab_columns = tab_columns)
 for(i in factor_indexes){
-  data_work %>% plot_factor(sym(paste("Q",i, sep = ""))) %>% print()
+  data_work %>%
+    plot_factor(sym(paste("Q",i, sep = "")),
+                tab_columns = tab_columns,
+                order_factor_freq = (i %ni% order_factors)) %>%
+    print()
+  
+  if(i %ni% order_factors){
+  kable(data_work %>%
+          select(paste("Q",i, sep ="")) %>%
+          table %>%
+          prop.table() %>%
+          {.*100} %>%
+          round(digits = 2) %>% sort(decreasing =TRUE)) %>%
+    print()
+  cat("\n")}
+  else{kable(data_work %>%
+          select(paste("Q",i, sep ="")) %>%
+          table %>%
+          prop.table() %>%
+          {.*100} %>%
+          round(digits = 2)) %>%
+    print()
+  cat("\n")}
 }
 
 
@@ -82,8 +139,10 @@ for(i in factor_indexes){
 data_work %>% 
   count(Q20) %>% 
   mutate(prop = n/sum(n)) %>%  
-  ggplot(aes(x = Q20, y = n)) + geom_col(color = 'black', fill = "white") +
-  scale_y_continuous() + scale_x_continuous(breaks = seq(19,78,by=5))
+  ggplot(aes(x = Q20, y = n)) +
+  geom_col(color = 'black', fill = "white") +
+  scale_y_continuous() +
+  scale_x_continuous(breaks = seq(19,78,by=5))
 
 
 ```
@@ -93,8 +152,75 @@ data_work %>%
 
 factor_logical <- data_work %>% select_if(is.logical) %>% names
 
-data_work %>% count(Livres) %>% mutate(prop = n/sum(n))  %>% 
-  ggplot(aes(x="", y=prop, fill=Livres))  + geom_bar(width = 1, stat = "identity") + coord_polar("y", start=0) + scale_y_continuous(labels = scales::percent)
+
+data_work %>% plot_logical(sym("Conférences"), tab_columns = tab_columns, data_options = data_options)
+
+for(i in factor_logical){
+  data_work %>%
+    plot_logical(sym(i), tab_columns = tab_columns, data_options = data_options) %>%
+    print()
+}
+
 ```
 
+```{r}
+
+data_work %>%
+  count(Q23) %>%
+  mutate(prop = n/sum(n))  %>% 
+  ggplot(aes(x="", y=prop, fill=Q23))  + 
+  geom_bar(width = 1, stat = "identity") +
+  coord_polar("y", start=0) +
+  scale_y_continuous(labels = scales::percent, breaks = seq(0,1,by = 0.1)) + 
+  ggtitle(label = "Répartition des différentes formations") +
+  theme(legend.text = element_text(size = 6)) + 
+  guides(fill = guide_legend( "Domaine"))
+
+```
+
+```{r}
+
+# data_work %>% 
+#   ggplot(aes(x = Q19 )) 
+
+```
+
+```{r}
+
+plot_logical_age(column = sym("Conférences"), tab_columns = tab_columns, data_options = data_options)
+
+for(i in factor_logical){
+  data_work %>%
+    plot_logical_age(sym(i), tab_columns = tab_columns, data_options = data_options) %>%
+    print()
+  
+  print(i)
+  t.test(data_work %>% filter(!!sym(i) == TRUE) %>% pull(Q20),
+         data_work %>% filter(!!sym(i) == FALSE) %>% pull(Q20)) %>% 
+    print()
+}
+
+plot_logical_age(column = sym("Végétarien"), tab_columns = tab_columns, data_options = data_options)
+plot_logical_age(column = sym("Végétalien"), tab_columns = tab_columns, data_options = data_options)
+plot_logical_age(column = sym("conférence"), tab_columns = tab_columns, data_options = data_options)
+
+```
+
+```{r}
+
+plot_logical_age(column = sym("Q17"), tab_columns = tab_columns, data_options = data_options)
+
+```
+
+```{r}
+
+# data_work %>% 
+#   select(Q4,Q11) %>% summarise(n = n_distinct(Q4,Q11))
+#   ggplot(aes(x = Q4, y = Q11)) + geom_point() 
+table(data_work$Q5, data_work$Q6)
+table(data_work$Q6,data_work$Q7)
+
+table(data_work$Q11, data_work$Q23)
+
+```
 

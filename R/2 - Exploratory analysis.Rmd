@@ -1,0 +1,72 @@
+---
+title: "1-Visualize Data"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r setup, message=FALSE, warning=FALSE}
+# packages
+library(readr)
+library(lubridate)
+library(tidyverse)
+library(knitr)
+library(readxl)
+library(FactoMineR)
+
+# path
+opts_knit$set(root.dir = normalizePath('../'))
+
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+theme_set(theme_bw())
+
+options(tibble.print_max = 80, tibble.print_min = 80)
+
+"%ni%" <- Negate("%in%")
+
+
+set_NA <- `is.na<-` #Function to add NAs columns
+
+
+
+```
+
+
+```{r}
+
+data_work <- read_rds('data/data_work.rds')
+tab_columns <- read_rds('data/tab_columns.rds')
+data_options <- read_rds('data/data_options.rds')
+
+```
+
+
+```{r}
+
+# data_MCA <- data_work %>% select_if(function(x){return(is.logical(x) | is.factor(x))})
+# data_MCA <- data_work %>% select_if(is.factor)
+MCA.colnames <- data_work %>% select(paste("Q", c(2:10), sep = "")) %>% select_if(is.factor) %>%colnames #individual 2 has some specificities that make the computations of MCA go wrong
+
+index.mca <- which(colnames(data_work)%in% MCA.colnames )
+
+data_MCA <- data_work %>% select(c(index.mca,19))
+```
+
+```{r}
+
+
+result.MCA <- MCA(data_MCA %>% slice(-2) )
+plot.MCA(x = result.MCA, col.ind.sup = "red", choix = "ind")
+
+
+barplot(sort(result.MCA$eig[,"percentage of variance"],decreasing = TRUE))
+
+```
+
+```{r}
+
+
+
+```
+

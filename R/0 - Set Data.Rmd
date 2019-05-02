@@ -20,7 +20,6 @@ library(googledrive)
 opts_knit$set(root.dir = normalizePath('../'))
 
 opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
-registerDoMC(cores=8)
 theme_set(theme_bw())
 
 options(tibble.print_max = 80, tibble.print_min = 80)
@@ -72,7 +71,7 @@ Q16_options <- c("réseaux sociaux", "références directement", "profil bas", "
 Q28_options <- c("Académicien", "Coach", "Ancien Académicien")
 Q25_options <- c("Local", "Bio", "Végétalien", "Végétarien", "Flexitarien", "pas trop attention")
 
-
+data_options <- tibble(options = c(Q3_options, Q9_options, Q10_options, Q16_options, Q25_options, Q28_options), id = c(rep("Q3", length(Q3_options)),rep("Q9", length(Q9_options)),rep("Q10", length(Q10_options)),rep("Q16", length(Q16_options)),rep("Q25", length(Q25_options)),rep("Q28", length(Q28_options))))
 ```
 
 ```{r}
@@ -102,6 +101,8 @@ for (var in Q16_options) {
 for (var in Q28_options) {
  data_work[[var]] <- grepl(var, data_work$Q28,fixed = TRUE)
 }
+#Correct problem that makes ancien académicien be detected as académicien
+data_work <- data_work %>% mutate(Académicien = ifelse(Académicien == TRUE & `Ancien Académicien`==TRUE, FALSE, Académicien))
 
 for (var in Q25_options) {
  data_work[[var]] <- grepl(var, data_work$Q25)
@@ -121,8 +122,76 @@ data_work <- data_work %>%
   mutate_at(paste("Q", c(2,4,5,6,7,11,12,13,14,15,17,19,21,22,24,26), sep = ""),
             .funs = as.factor) 
 
+data_work <- data_work  %>% 
+  mutate(Q4 = factor(Q4, levels = c(1:10)),
+         Q5 = factor(Q5, levels = c(1:10)),
+         Q11 = factor(Q11, levels = c(1:11)),
+         Q17 = factor(Q17, levels = c(1:5)))  %>%
+  mutate_at(paste("Q", c(12,13,14,15), sep = ""),
+            .funs = factor , levels = c(1:7)) 
 
 ```
+
+
+```{r Q23}
+
+#Deal with Q23
+base_options <- c("Economie / Gestion", "Mathématiques / Informatique", "Droit", "Santé", "Sciences sociales", "Sciences naturelles / Sciences de l'environnement", "Langues / Littérature / Communication", "Art / Musique / Design / Arts du spectacles", "Histoire / Civilisation")
+
+other_responses <- data_work %>% select(Q23) %>% filter(Q23 %ni% base_options)
+
+engineering_responses <- other_responses %>% 
+  filter(str_detect(tolower(Q23), paste(c("energétique", "ingénierie", "ingénieur", "energie", "physique", "spatial", "btp"), collapse = "|"))) %>% pull(Q23) %>% as.vector
+
+names(engineering_responses) =  rep("Ingéniérie", length(engineering_responses))
+#Need of a new category:  engineering
+data_work <- data_work %>% mutate(Q23 = as.factor(Q23))
+data_work<- data_work %>% mutate(Q23 = fct_recode(Q23, !!!engineering_responses), Q23 = fct_recode(Q23,"Sciences naturelles / Sciences de l'environnement" = "Développement durable", "Mathématiques / Informatique" = "Électronique/Informatique" ), Q23 = fct_recode(Q23, "Economie / Gestion" = "école de commerce + un second master en Développement durable"), Q23 = fct_other(Q23,other_level = "Autre",keep = c(base_options, "Ingéniérie")))
+
+
+```
+
+
+```{r}
+# Give shorter names to factor levels
+
+Q2_levels <- data_work %>% pull(Q2) %>% levels
+names(Q2_levels) <- c("+ de 8 ans", "- de 2 ans", "Entre 2 et 5 ans", "Entre 5 et 8 ans")
+
+data_work <- data_work %>% mutate(Q2 = fct_recode(Q2, !!!Q2_levels ))
+
+
+
+Q6_levels <- data_work %>% pull(Q6) %>% levels
+names(Q6_levels) <- c("A déjà commencé", "D'ici 10 ans", "D'ici 15 à 20 ans", "D'ici 5 ans")
+data_work <- data_work %>% mutate(Q6 = fct_recode(Q6, !!!Q6_levels ))
+
+Q7_levels <- data_work %>% pull(Q7) %>% levels
+names(Q7_levels) <- c("Lent", "Plutôt rapide", "Très rapide", "Un peu plus lent")
+data_work <- data_work %>% mutate(Q7 = fct_recode(Q7, !!!Q7_levels ))
+
+Q19_levels <- data_work %>% pull(Q19) %>% levels
+names(Q19_levels) <- c("H", "F")
+data_work <- data_work %>% mutate(Q19 = fct_recode(Q19, !!!Q19_levels ))
+
+Q21_levels <- data_work %>% pull(Q21) %>% levels
+names(Q21_levels) <- c("Village", "Banlieue", "Grande agglomération", "Ville moyenne")
+data_work <- data_work %>% mutate(Q21 = fct_recode(Q21, !!!Q21_levels ))
+
+Q22_levels <- data_work %>% pull(Q22) %>% levels
+names(Q22_levels) <- c("Doctorat", "Etudes secondaires", "Etudes supérieures courtes", "Etudes supérieures longues")
+data_work <- data_work %>% mutate(Q22 = fct_recode(Q22, !!!Q22_levels ))
+
+Q24_levels <- data_work %>% pull(Q24) %>% levels
+names(Q24_levels) <- c("Moyenne occidentale", "Plutôt écolo", "Très frugal")
+data_work <- data_work %>% mutate(Q24 = fct_recode(Q24, !!!Q24_levels ))
+
+Q26_levels <- data_work %>% pull(Q26) %>% levels
+names(Q26_levels) <- c("Centre/libéral", "Aucun parti", "Autre", "Conservateur", "Gauche modérée", "Parti écolo", "Très à gauche")
+data_work <- data_work %>% mutate(Q26 = fct_recode(Q26, !!!Q26_levels ))
+```
+
+
 
 
 
@@ -130,7 +199,7 @@ data_work <- data_work %>%
 
 write_rds(data_work, path = "data/data_work.rds")
 write_rds(tab_columns, path = "data/tab_columns.rds")
-
+write_rds(data_options, path = "data/data_options.rds")
 
 ```
 
