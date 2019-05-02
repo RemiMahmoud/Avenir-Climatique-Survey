@@ -50,14 +50,15 @@ MCA.colnames <- data_work %>% select(paste("Q", c(2:10), sep = "")) %>% select_i
 
 index.mca <- which(colnames(data_work)%in% MCA.colnames )
 
-data_MCA <- data_work %>% select(c(index.mca,19))
+col.sup = 19
+data_MCA <- data_work %>% select(c(index.mca,col.sup))
 ```
 
 ```{r}
 
 
-result.MCA <- MCA(data_MCA %>% slice(-2) )
-plot.MCA(x = result.MCA, col.ind.sup = "red", choix = "ind")
+result.MCA <- MCA(data_MCA %>% slice(-2) , quali.sup = length(index.mca) + 1)
+plot.MCA(x = result.MCA, col.ind.sup = "red", choix = "ind", habillage = length(index.mca)  +1 )
 
 
 barplot(sort(result.MCA$eig[,"percentage of variance"],decreasing = TRUE))
